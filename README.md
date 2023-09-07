@@ -1,5 +1,5 @@
 # comp4900RL
-Repo for the developement work on the Comp 4900 C group project
+Repo for the development work on the Comp 4900 C group project
 
 
 # Installation and Setup
@@ -36,10 +36,10 @@ Repo for the developement work on the Comp 4900 C group project
 <br>
 
 5. Install and configure Visual Studio Code (https://code.visualstudio.com/)
-    - Intall the environment manager extension to enable VScode to execute code from the anaconda environment.
+    - Install the environment manager extension to enable VScode to execute code from the Anaconda environment.
     - This comes as part of a nice package
         - https://marketplace.visualstudio.com/items?itemName=donjayamanne.python-extension-pack
-    - Or can be installed seperately, and use whatever other python extesnions you prefer
+    - Or can be installed separately, and use whatever other python extensions you prefer
         - https://marketplace.visualstudio.com/items?itemName=donjayamanne.python-environment-manager
 <br><br>
 
