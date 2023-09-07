@@ -1,0 +1,10 @@
+name: 4900RL
+
+channels:
+  - conda-forge
+  - cogsci
+
+dependencies:
+  - python=3.5
+  - gymnasium
+  - pygame
