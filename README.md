@@ -45,3 +45,5 @@ Repo for the development work on the Comp 4900 C group project
 
 6. Before running your python file set your execution environment in the bottom toolbar
     ![Alt text](docs/select_env.png)
+   
+7. Shaun says hi
