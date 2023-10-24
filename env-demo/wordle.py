@@ -11,7 +11,7 @@ from const import WORDLE_N, REWARD
 import colorama
 from colorama import Fore, Style, init
 
-init(autoreset=True)
+init(autoreset=True) # So that the colour defaults to white and we don't have to manually change it in between print statements
 
 CUR_PATH = os.environ.get('PYTHONPATH', '.')
 import os
@@ -76,7 +76,7 @@ class WordleEnvBase(gym.Env):
         self.done = True
         self.goal_word: int = -1
 
-        self.guesses = []
+        self.guesses = [] # only necessary if we're rendering
         self.state: state.WordleState = None
         self.state_updater = state.update
         if self.mask_based_state_updates:
@@ -107,11 +107,11 @@ class WordleEnvBase(gym.Env):
             self.done = True
             reward = -REWARD
 
-        # update game board
+        # update game board (only necessary if we're rendering)
         board_row_idx = self.max_turns - state.remaining_steps(self.state) - 1
         self.board[board_row_idx] = state.get_mask(word= self.words[action], goal_word= self.words[self.goal_word])
 
-        # update previous guesses made
+        # update previous guesses made (only necessary if we're rendering)
         self.guesses.append(self.words[action])
 
         return self.state.copy(), reward, self.done, {"goal_id": self.goal_word}
@@ -124,8 +124,8 @@ class WordleEnvBase(gym.Env):
         self.done = False
         self.goal_word = int(np.random.random()*self.allowable_words)
         self.board = np.negative(
-            np.ones(shape=(self.max_turns, WORDLE_N), dtype=int))
-        self.guesses = []
+            np.ones(shape=(self.max_turns, WORDLE_N), dtype=int)) # (only necessary if we're rendering)
+        self.guesses = [] # (only necessary if we're rendering)
 
         return self.state.copy()
 
@@ -144,24 +144,25 @@ class WordleEnvBase(gym.Env):
             print()
         print()
 
+        # Here, we're printing out the keyboard. Iterate over each letter in the alphabet
         for i in range(26):
             letter = chr(ord('A') + i)
-            if self.state[1 + i] == 0:
+            if self.state[1 + i] == 0: # If the letter has not been attempted yet, colour it bright white
                 print(Fore.WHITE + Style.BRIGHT + letter + " ", end='')
             else:
                 isColorDetermined = False
-                for j in range(5):
-                    if self.state[1 + 26 + i * 15 + 2 + j * 3] == 1:
+                for j in range(WORDLE_N): # If the letter is green in a single one of the 5 slots, colour that letter green on the keyboard
+                    if self.state[1 + 26 + i * 3 * WORDLE_N + 2 + j * 3] == 1:
                         print(Fore.GREEN + Style.BRIGHT + letter + " ", end='')
                         isColorDetermined = True
                         break
-                if not isColorDetermined:
-                    for j in range(5):
-                        if self.state[1 + 26 + i * 15 + 1 + j * 3] == 1:
+                if not isColorDetermined: # Only bother checking this if the letter is not green
+                    for j in range(WORDLE_N):  # If the letter is yellow in a single one of the 5 slots, colour that letter yellow on the keyboard
+                        if self.state[1 + 26 + i * 3 * WORDLE_N + 1 + j * 3] == 1:
                             print(Fore.YELLOW + Style.BRIGHT + letter + " ", end='')
                             isColorDetermined = True
                             break
-                if not isColorDetermined:
+                if not isColorDetermined: # Only print this if letter is not green or yellow (i.e. the letter is definitely not in the word)
                     print(Fore.BLACK + Style.BRIGHT + letter + " ", end='')
             
         print()
