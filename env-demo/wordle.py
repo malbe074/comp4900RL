@@ -27,13 +27,6 @@ def _load_words(limit: Optional[int]=None) -> List[str]:
         else:
             return lines[:limit]
 
-def strToEncode(lines):
-    encoding = []
-    for line in lines:
-        assert len(line.strip()) == WORDLE_N  # Must contain 5-letter words for now
-        encoding.append(tuple(ord(char) - 65 for char in line.strip()))
-    return encoding
-
 class WordleEnvBase(gym.Env):
     """
     Actions:
@@ -58,7 +51,6 @@ class WordleEnvBase(gym.Env):
                  mask_based_state_updates: bool=False):
         assert all(len(w) == WORDLE_N for w in words), f'Not all words of length {WORDLE_N}, {words}'
         self.words = words
-        self.encoded_words = strToEncode(words)
         self.max_turns = max_turns
         self.allowable_words = allowable_words
         self.mask_based_state_updates = mask_based_state_updates
@@ -116,8 +108,6 @@ class WordleEnvBase(gym.Env):
 
         return self.state.copy(), reward, self.done, {"goal_id": self.goal_word}
 
-    def _get_obs(self):
-        return {'board': self.board}
 
     def reset(self, seed: Optional[int] = None):
         self.state = state.new(self.max_turns)
