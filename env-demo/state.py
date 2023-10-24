@@ -17,7 +17,7 @@ import collections
 from typing import List
 import numpy as np
 
-from wordle.const import WORDLE_CHARS, WORDLE_N
+from const import WORDLE_CHARS, WORDLE_N
 
 
 WordleState = np.ndarray
