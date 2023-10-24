@@ -9,7 +9,9 @@ import state
 from const import WORDLE_N, REWARD
 
 import colorama
-from colorama import Fore, Style
+from colorama import Fore, Style, init
+
+init(autoreset=True)
 
 CUR_PATH = os.environ.get('PYTHONPATH', '.')
 import os
@@ -105,31 +107,17 @@ class WordleEnvBase(gym.Env):
             self.done = True
             reward = -REWARD
 
-        # update game board and alphabet tracking
+        # update game board
         board_row_idx = self.max_turns - state.remaining_steps(self.state) - 1
-        encoded_guessed_word = self.encoded_words[action]
-        for idx, char in enumerate(encoded_guessed_word):
-
-            if self.encoded_words[self.goal_word][idx] == char:
-                encoding = 2
-                self.alphabet[char] = encoding
-            elif char in self.encoded_words[self.goal_word]:
-                encoding = 1
-                if self.alphabet[char] == 0:
-                    self.alphabet[char] = encoding
-            else:
-                encoding = 0
-
-            self.board[board_row_idx, idx] = encoding
-            # self.alphabet[char] = encoding
+        self.board[board_row_idx] = state.get_mask(word= self.words[action], goal_word= self.words[self.goal_word])
 
         # update previous guesses made
-        self.guesses.append(self.encoded_words[action])
+        self.guesses.append(self.words[action])
 
         return self.state.copy(), reward, self.done, {"goal_id": self.goal_word}
 
     def _get_obs(self):
-        return {'board': self.board, 'alphabet': self.alphabet}
+        return {'board': self.board}
 
     def reset(self, seed: Optional[int] = None):
         self.state = state.new(self.max_turns)
@@ -137,7 +125,6 @@ class WordleEnvBase(gym.Env):
         self.goal_word = int(np.random.random()*self.allowable_words)
         self.board = np.negative(
             np.ones(shape=(self.max_turns, WORDLE_N), dtype=int))
-        self.alphabet = np.zeros(shape=(26,), dtype=int)
         self.guesses = []
 
         return self.state.copy()
@@ -147,7 +134,7 @@ class WordleEnvBase(gym.Env):
         print('###################################################')
         for i in range(len(self.guesses)):
             for j in range(WORDLE_N):
-                letter = chr(ord('A') + self.guesses[i][j])
+                letter = self.guesses[i][j]
                 if self.board[i][j] == 0:
                     print(Fore.BLACK + Style.BRIGHT + letter + " ", end='')
                 elif self.board[i][j] == 1:
@@ -157,16 +144,26 @@ class WordleEnvBase(gym.Env):
             print()
         print()
 
-        for i in range(len(self.alphabet)):
+        for i in range(26):
             letter = chr(ord('A') + i)
-            if self.alphabet[i] == 0:
-                print(Fore.BLACK + Style.BRIGHT + letter + " ", end='')
-            elif self.alphabet[i] == 1:
-                print(Fore.YELLOW + Style.BRIGHT + letter + " ", end='')
-            elif self.alphabet[i] == 2:
-                print(Fore.GREEN + Style.BRIGHT + letter + " ", end='')
-            elif self.alphabet[i] == -1:
-                print(letter + " ", end='')
+            if self.state[1 + i] == 0:
+                print(Fore.WHITE + Style.BRIGHT + letter + " ", end='')
+            else:
+                isColorDetermined = False
+                for j in range(5):
+                    if self.state[1 + 26 + i * 15 + 2 + j * 3] == 1:
+                        print(Fore.GREEN + Style.BRIGHT + letter + " ", end='')
+                        isColorDetermined = True
+                        break
+                if not isColorDetermined:
+                    for j in range(5):
+                        if self.state[1 + 26 + i * 15 + 1 + j * 3] == 1:
+                            print(Fore.YELLOW + Style.BRIGHT + letter + " ", end='')
+                            isColorDetermined = True
+                            break
+                if not isColorDetermined:
+                    print(Fore.BLACK + Style.BRIGHT + letter + " ", end='')
+            
         print()
         print("HEY, GOAL WORD IS ", self.words[self.goal_word])
         print('###################################################')

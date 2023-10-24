@@ -1,15 +1,9 @@
 import gymnasium as gym
 
-# import ShaunSim.A2codes as A2codes
-# from A2helpers import FourRoom, plot_grid_world
-
-# import gym_wordle
-
-# from wordle_env import WordleEnv
 from wordle import WordleEnv1000
 from exceptions import InvalidWordException
 
-env = WordleEnv1000() # WordleEnv()  # gym.make('wordle_env')
+env = WordleEnv1000()
 
 obs = env.reset()
 done = False
