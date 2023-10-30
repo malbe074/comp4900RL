@@ -82,9 +82,20 @@ class WordleEnvBase(gym.Env):
                 "should always call 'reset()' once you receive 'done = "
                 "True' -- any further steps are undefined behavior."
             )
+        temp1 = self.state_updater(state=self.state,                     #state matrix
+                                        word=self.words[action],              #the agent choice of word
+                                        goal_word=self.words[self.goal_word]) #goal word
+        
+        temp = state.update_mask(state=self.state, 
+                                        word=self.words[action],             
+                                        goal_word=self.words[self.goal_word])
+        
         self.state = self.state_updater(state=self.state,
                                         word=self.words[action],
                                         goal_word=self.words[self.goal_word])
+        
+        if np.not_equal(temp1.all(),temp.all()):
+            print(f"its not equal")
 
         reward = 0
         if action == self.goal_word:
