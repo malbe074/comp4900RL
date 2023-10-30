@@ -22,17 +22,17 @@ from const import WORDLE_CHARS, WORDLE_N
 
 WordleState = np.ndarray
 
-
+# get_nvec returns a list of the number of possible values for each index (needed for MultiDiscrete)
 def get_nvec(max_turns: int):
     return [max_turns] + [2] * len(WORDLE_CHARS) + [2] * 3 * WORDLE_N * len(WORDLE_CHARS)
 
-
+# new returns a new state with the given number of max_turns
 def new(max_turns: int) -> WordleState:
     return np.array(
-        [max_turns] + [0] * len(WORDLE_CHARS) + [0, 1, 0] * WORDLE_N * len(WORDLE_CHARS),
+        [max_turns] + ([0] * len(WORDLE_CHARS)) + ([0, 1, 0] * WORDLE_N * len(WORDLE_CHARS)),
         dtype=np.int32)
 
-
+# remaining_steps returns the number of remaining steps in the game/state
 def remaining_steps(state: WordleState) -> int:
     return state[0]
 
@@ -62,17 +62,19 @@ def update_from_mask(state: WordleState, word: str, mask: List[int]) -> WordleSt
     # second pass sets the no's for those who aren't already yes
     state[0] -= 1
     for i, c in enumerate(word):
+        # cint is the index of the char in WORDLE_CHARS
         cint = ord(c) - ord(WORDLE_CHARS[0])
         offset = 1 + len(WORDLE_CHARS) + cint * WORDLE_N * 3
         state[1 + cint] = 1
+        # If the mask is YES(mask[i] = 2), then we know that char is definitely in that position
         if mask[i] == YES:
             prior_yes.append(c)
-            # char at position i = yes, all other chars at position i == no
-            state[offset + 3 * i:offset + 3 * i + 3] = [0, 0, 1]
+            # char at position i = yes, then we know all other chars at position i == no
+            state[(offset + 3 * i):(offset + 3 * i + 3)] = [0, 0, 1]
             for ocint in range(len(WORDLE_CHARS)):
                 if ocint != cint:
                     oc_offset = 1 + len(WORDLE_CHARS) + ocint * WORDLE_N * 3
-                    state[oc_offset + 3 * i:oc_offset + 3 * i + 3] = [1, 0, 0]
+                    state[(oc_offset + 3 * i):(oc_offset + 3 * i + 3)] = [1, 0, 0]
 
     for i, c in enumerate(word):
         cint = ord(c) - ord(WORDLE_CHARS[0])
@@ -80,21 +82,21 @@ def update_from_mask(state: WordleState, word: str, mask: List[int]) -> WordleSt
         if mask[i] == SOMEWHERE:
             prior_maybe.append(c)
             # Char at position i = no, other chars stay as they are
-            state[offset + 3 * i:offset + 3 * i + 3] = [1, 0, 0]
+            state[(offset + 3 * i):(offset + 3 * i + 3)] = [1, 0, 0]
         elif mask[i] == NO:
             # Need to check this first in case there's prior maybe + yes
             if c in prior_maybe:
                 # Then the maybe could be anywhere except here
-                state[offset+3*i:offset+3*i+3] = [1, 0, 0]
+                state[(offset + 3 * i):(offset + 3 * i + 3)] = [1, 0, 0]
             elif c in prior_yes:
                 # No maybe, definitely a yes, so it's zero everywhere except the yesses
                 for j in range(WORDLE_N):
                     # Only flip no if previously was maybe
-                    if state[offset + 3 * j:offset + 3 * j + 3][1] == 1:
-                        state[offset + 3 * j:offset + 3 * j + 3] = [1, 0, 0]
+                    if state[(offset + 3 * j):(offset + 3 * j + 3)][1] == 1:
+                        state[(offset + 3 * j):(offset + 3 * j + 3)] = [1, 0, 0]
             else:
                 # Just straight up no
-                state[offset:offset+3*WORDLE_N] = [1, 0, 0]*WORDLE_N
+                state[offset:(offset + 3 * WORDLE_N)] = [1, 0, 0] * WORDLE_N
 
     return state
 
@@ -146,17 +148,17 @@ def update(state: WordleState, word: str, goal_word: str) -> WordleState:
         state[1 + cint] = 1
         if goal_word[i] == c:
             # char at position i = yes, all other chars at position i == no
-            state[offset + 3 * i:offset + 3 * i + 3] = [0, 0, 1]
+            state[(offset + 3 * i):(offset + 3 * i + 3)] = [0, 0, 1]
             for ocint in range(len(WORDLE_CHARS)):
                 if ocint != cint:
                     oc_offset = 1 + len(WORDLE_CHARS) + ocint * WORDLE_N * 3
-                    state[oc_offset + 3 * i:oc_offset + 3 * i + 3] = [1, 0, 0]
+                    state[(oc_offset + 3 * i):(oc_offset + 3 * i + 3)] = [1, 0, 0]
         elif c in goal_word:
             # Char at position i = no, other chars stay as they are
-            state[offset + 3 * i:offset + 3 * i + 3] = [1, 0, 0]
+            state[(offset + 3 * i):(offset + 3 * i + 3)] = [1, 0, 0]
         else:
             # Char at all positions = no
-            state[offset:offset + 3 * WORDLE_N] = [1, 0, 0] * WORDLE_N
+            state[offset:(offset + 3 * WORDLE_N)] = [1, 0, 0] * WORDLE_N
 
     return state
 
