@@ -18,7 +18,7 @@ import os
 dirname = os.path.dirname(__file__)
 VALID_WORDS_PATH = f'{dirname}/data/wordle_words.txt'
 
-
+# loads the words from the wordle_words.txt file
 def _load_words(limit: Optional[int]=None) -> List[str]:
     with open(VALID_WORDS_PATH, 'r') as f:
         lines = [x.strip().upper() for x in f.readlines()]
@@ -54,14 +54,19 @@ class WordleEnvBase(gym.Env):
         self.max_turns = max_turns
         self.allowable_words = allowable_words
         self.mask_based_state_updates = mask_based_state_updates
+        
+        # if no allowable words are specified, use all words
         if not self.allowable_words:
             self.allowable_words = len(self.words)
 
         self.frequencies = None
+        # if frequencies are specified, normalize them
+        # gives each word a probability of being the goal word
         if frequencies:
             assert len(words) == len(frequencies), f'{len(words), len(frequencies)}'
             self.frequencies = np.array(frequencies, dtype=np.float32) / sum(frequencies)
 
+        # set up the action and observation spaces
         self.action_space = spaces.Discrete(len(self.words))
         self.observation_space = spaces.MultiDiscrete(state.get_nvec(self.max_turns))
 
@@ -70,6 +75,8 @@ class WordleEnvBase(gym.Env):
 
         self.guesses = [] # only necessary if we're rendering
         self.state: state.WordleState = None
+
+        # define which function to use to update the state
         self.state_updater = state.update
         if self.mask_based_state_updates:
             self.state_updater = state.update_mask
@@ -112,6 +119,7 @@ class WordleEnvBase(gym.Env):
     def reset(self, seed: Optional[int] = None):
         self.state = state.new(self.max_turns)
         self.done = False
+
         self.goal_word = int(np.random.random()*self.allowable_words)
         self.board = np.negative(
             np.ones(shape=(self.max_turns, WORDLE_N), dtype=int)) # (only necessary if we're rendering)
