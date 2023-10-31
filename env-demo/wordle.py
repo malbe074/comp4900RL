@@ -119,7 +119,7 @@ class WordleEnvBase(gym.Env):
 
         return self.state.copy()
 
-    def render(self, mode="human"):
+    def render(self, mode="human", hide_goal_word: bool=False):
         assert mode in ["human"], "Invalid mode, must be \"human\""
         print('###################################################')
         for i in range(len(self.guesses)):
@@ -154,11 +154,17 @@ class WordleEnvBase(gym.Env):
                             break
                 if not isColorDetermined: # Only print this if letter is not green or yellow (i.e. the letter is definitely not in the word)
                     print(Fore.BLACK + Style.BRIGHT + letter + " ", end='')
-            
-        print()
-        print("HEY, GOAL WORD IS ", self.words[self.goal_word])
-        print('###################################################')
-        print()
+
+        
+        if not hide_goal_word:
+            print()
+            print("HEY, GOAL WORD IS ", self.words[self.goal_word])
+            print('###################################################')
+            print()
+        else:
+            print()
+            print('###################################################')
+            print()
 
 
     def set_goal_word(self, goal_word: str):
