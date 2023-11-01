@@ -17,7 +17,7 @@ import collections
 from typing import List
 import numpy as np
 
-from const import WORDLE_CHARS, WORDLE_N
+from const import WORDLE_CHARS, WORDLE_N, NO, SOMEWHERE, YES
 
 
 WordleState = np.ndarray
@@ -26,7 +26,7 @@ WordleState = np.ndarray
 def get_nvec(max_turns: int):
     return [max_turns] + [2] * len(WORDLE_CHARS) + [2] * 3 * WORDLE_N * len(WORDLE_CHARS)
 
-# new returns a new state with the given number of max_turns
+# new returns the starting state with the given number of max_turns
 def new(max_turns: int) -> WordleState:
     return np.array(
         [max_turns] + ([0] * len(WORDLE_CHARS)) + ([0, 1, 0] * WORDLE_N * len(WORDLE_CHARS)),
@@ -37,11 +37,8 @@ def remaining_steps(state: WordleState) -> int:
     return state[0]
 
 
-NO = 0
-SOMEWHERE = 1
-YES = 2
-
-
+# takes previous state (state), a guess (word), and the mask (mask) and then
+# returns the next state with the guess applied
 def update_from_mask(state: WordleState, word: str, mask: List[int]) -> WordleState:
     """
     return a copy of state that has been updated to new state
@@ -100,16 +97,21 @@ def update_from_mask(state: WordleState, word: str, mask: List[int]) -> WordleSt
 
     return state
 
-
+# get_mask returns a list of the status of each character in the word
 def get_mask(word: str, goal_word: str) -> List[int]:
     # Definite yesses first
     mask = [0, 0, 0, 0, 0]
+    # convert goal word to a counter with the occurrences of each character in the string (dictionary)
     counts = collections.Counter(goal_word)
+    
+    # check if the character in word is in the same position as the character in goal_word
     for i, c in enumerate(word):
         if goal_word[i] == c:
             mask[i] = 2
             counts[c] -= 1
 
+    # check if char in goal_word but not same position as goal_word and lastly
+    # check if char not in goal_word
     for i, c in enumerate(word):
         if mask[i] == 2:
             continue
@@ -123,8 +125,11 @@ def get_mask(word: str, goal_word: str) -> List[int]:
                         continue
                     mask[j] = 0
 
+    # return mask with 0, 1, 2 for no, somewhere, yes respectively for each character in word in comparison to goal_word
     return mask
 
+
+# returns te result of update_from_mask with the mask generated from get_mask
 def update_mask(state: WordleState, word: str, goal_word: str) -> WordleState:
     """
     return a copy of state that has been updated to new state
@@ -138,17 +143,20 @@ def update_mask(state: WordleState, word: str, goal_word: str) -> WordleState:
     return update_from_mask(state, word, mask)
 
 
+
 def update(state: WordleState, word: str, goal_word: str) -> WordleState:
     state = state.copy()
 
     state[0] -= 1
     for i, c in enumerate(word):
+        # cint is the index of the char in WORDLE_CHARS
         cint = ord(c) - ord(WORDLE_CHARS[0])
         offset = 1 + len(WORDLE_CHARS) + cint * WORDLE_N * 3
         state[1 + cint] = 1
         if goal_word[i] == c:
             # char at position i = yes, all other chars at position i == no
             state[(offset + 3 * i):(offset + 3 * i + 3)] = [0, 0, 1]
+            # all other chars at position i == no
             for ocint in range(len(WORDLE_CHARS)):
                 if ocint != cint:
                     oc_offset = 1 + len(WORDLE_CHARS) + ocint * WORDLE_N * 3
