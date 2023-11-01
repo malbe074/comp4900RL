@@ -1,3 +1,6 @@
+# CREDIT: Much of this environment code comes from Andrew Ho https://github.com/andrewkho/wordle-solver
+# CREDIT: The render function was adapted from Zach's implementation of it https://github.com/zach-lawless/gym-wordle
+
 import os
 from typing import Optional, List
 

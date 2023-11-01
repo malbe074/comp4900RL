@@ -1,3 +1,4 @@
+# CREDIT: Much of this state code comes from Andrew Ho https://github.com/andrewkho/wordle-solver
 """
 Keep the state in a 1D int array
 
