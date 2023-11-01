@@ -97,7 +97,7 @@ def update_from_mask(state: WordleState, word: str, mask: List[int]) -> WordleSt
 
     return state
 
-# get_mask returns a list of the status of each character in the word
+# get_mask returns a list representing the wordle coloring of each character in the word
 def get_mask(word: str, goal_word: str) -> List[int]:
     # Definite yesses first
     mask = [0, 0, 0, 0, 0]
@@ -110,8 +110,9 @@ def get_mask(word: str, goal_word: str) -> List[int]:
             mask[i] = 2
             counts[c] -= 1
 
-    # check if char in goal_word but not same position as goal_word and lastly
-    # check if char not in goal_word
+    # check the rest of the characters in word and see if they are in goal_word
+    # NOTE: only sets the first occurrence of the character in the goal_word to 1 unless the goal_word has multiple occurrences of the character
+    # the rest of the mask is made up of 0s
     for i, c in enumerate(word):
         if mask[i] == 2:
             continue
@@ -125,7 +126,7 @@ def get_mask(word: str, goal_word: str) -> List[int]:
                         continue
                     mask[j] = 0
 
-    # return mask with 0, 1, 2 for no, somewhere, yes respectively for each character in word in comparison to goal_word
+    # return mask with 0, 1, 2 representing the wordle coloring for each character in word in comparison to goal_word
     return mask
 
 
