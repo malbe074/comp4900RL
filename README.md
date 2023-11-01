@@ -1,6 +1,8 @@
 # comp4900RL
 Repo for the development work on the Comp 4900 C group project
 
+ CREDIT: Much of this state and environment code comes from Andrew Ho https://github.com/andrewkho/wordle-solver
+ CREDIT: The render function was adapted from Zach's implementation of it https://github.com/zach-lawless/gym-wordle
 
 # Installation and Setup
 
