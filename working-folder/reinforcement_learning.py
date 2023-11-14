@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn # neural networks
 import torch.optim as optim # optimisation
 import torch.nn.functional as F
-
+import numpy as np
 from wordle import WordleEnv100
 
 env = WordleEnv100()
@@ -94,7 +94,14 @@ EPS_END = 0.05
 EPS_DECAY = 1000
 TAU = 0.005
 LR = 5e-5 # halve learning rate
+
+# Setting up seeds
 seed = 42 # https://stackoverflow.com/questions/75943057/i-cant-find-how-to-reproducibly-run-a-python-gymnasium-taxi-v3-environment
+np.random.seed(seed)
+random.seed(seed) # https://www.w3schools.com/python/ref_random_seed.asp#:~:text=The%20random%20number%20generator%20needs,of%20the%20random%20number%20generator.
+env.action_space.seed(seed) # https://gymnasium.farama.org/api/spaces/fundamental/#gymnasium.spaces.Discrete.sample
+torch.manual_seed(seed) # https://pytorch.org/docs/stable/generated/torch.manual_seed.html
+
 
 # Get number of actions from gym action space
 n_actions = env.action_space.n
@@ -153,7 +160,7 @@ def plot_durations(show_result=False):
     else:
         plt.clf() # clear current figure https://matplotlib.org/3.1.1/api/_as_gen/matplotlib.pyplot.clf.html
         plt.title('Training...')
-    plt.xlabel('Episode')
+    plt.xlabel('Every 10th Episode')
     plt.ylabel('Duration')
     plt.plot(durations_t.numpy())
     # Take 100 episode averages and plot them too
@@ -237,9 +244,10 @@ def optimize_model():
 
 # HEART OF CODE, KINDA LIKE THE main() function
 if torch.cuda.is_available(): # If you installed the CUDA version of pytorch which makes use of GPU
+    torch.cuda.manual_seed_all(seed) # Set the seed if cuda available https://pytorch.org/docs/stable/generated/torch.cuda.manual_seed_all.html
     num_episodes = 600
 else:
-    num_episodes = 100000
+    num_episodes = 25000
 
 for i_episode in range(num_episodes):
     # Initialize the environment and get it's state
@@ -275,9 +283,11 @@ for i_episode in range(num_episodes):
             target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
         target_net.load_state_dict(target_net_state_dict)
 
-        if done:
+        if done and i_episode % 10 == 0:
             episode_durations.append(t + 1)
             plot_durations()
+        
+        if done:
             break
 
 print('Complete')
