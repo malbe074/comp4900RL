@@ -86,11 +86,12 @@ EPS_END = 0.05
 EPS_DECAY = 1000
 TAU = 0.005
 LR = 1e-4
+seed = 42 # https://stackoverflow.com/questions/75943057/i-cant-find-how-to-reproducibly-run-a-python-gymnasium-taxi-v3-environment
 
 # Get number of actions from gym action space
 n_actions = env.action_space.n
 # Get the number of state observations
-state = env.reset()
+state = env.reset(seed = seed) # reset() should be called with a seed right after initialization and then never again. https://gymnasium.farama.org/api/env/#gymnasium.Env.reset
 n_observations = len(state)
 
 # Policy network is kinda like a neural network which contains our policy data (i.e. optimal Q values, or at least how to get them)
@@ -135,18 +136,19 @@ episode_durations = []
 
 
 def plot_durations(show_result=False):
-    plt.figure(1)
-    durations_t = torch.tensor(episode_durations, dtype=torch.float)
+    plt.figure(1) # creates a new figure for plotting
+    durations_t = torch.tensor(episode_durations, dtype=torch.float) # converts the list episode_durations to a PyTorch tensor named durations_t
     if show_result:
         plt.title('Result')
     else:
-        plt.clf()
+        plt.clf() # clear current figure https://matplotlib.org/3.1.1/api/_as_gen/matplotlib.pyplot.clf.html
         plt.title('Training...')
     plt.xlabel('Episode')
     plt.ylabel('Duration')
     plt.plot(durations_t.numpy())
     # Take 100 episode averages and plot them too
     if len(durations_t) >= 100:
+        # computes the rolling average of durations over a window of 100 episodes and plots it.
         means = durations_t.unfold(0, 100, 1).mean(1).view(-1)
         means = torch.cat((torch.zeros(99), means))
         plt.plot(means.numpy())
@@ -155,9 +157,9 @@ def plot_durations(show_result=False):
     if is_ipython:
         if not show_result:
             display.display(plt.gcf())
-            display.clear_output(wait=True)
+            display.clear_output(wait=True) # Clear the output of the current cell receiving output https://ipython.org/ipython-doc/3/api/generated/IPython.display.html#functions
         else:
-            display.display(plt.gcf())
+            display.display(plt.gcf()) # plt.gcf gets current figure (or creates a fig if one doesnt exist) https://matplotlib.org/3.1.1/api/_as_gen/matplotlib.pyplot.gcf.html
 
 ####################################################################################
 
@@ -227,17 +229,19 @@ def optimize_model():
 if torch.cuda.is_available(): # If you installed the CUDA version of pytorch which makes use of GPU
     num_episodes = 600
 else:
-    num_episodes = 50
+    num_episodes = 500
 
 for i_episode in range(num_episodes):
     # Initialize the environment and get it's state
     state = env.reset() # Reset the environment before you start an episode
     state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
-    for t in count(): # Play out an episode e.g. s0>a0>r1>s1>a2>r2>s2...
+    
+    for t in count(): # This python loop loops forever until we reach the end of the episode (at which point we break outta the loop). t takes on values 0, 1, 2 3...
         action = select_action(state) # 1) Choose action using eps-greedy policy
         observation, reward, terminated, truncated = env.step(action.item()) # 2) Get the r and s'.
         reward = torch.tensor([reward], device=device)
-        done = terminated or truncated
+        done = terminated
+       
 
         if terminated:
             next_state = None
@@ -270,6 +274,10 @@ print('Complete')
 plot_durations(show_result=True)
 plt.ioff()
 plt.show()
+
+# Saving the model https://github.com/christianversloot/machine-learning-articles/blob/main/how-to-save-and-load-a-pytorch-model.md
+save_path = './dqn_wordle_data.pth'
+torch.save(policy_net.state_dict(), save_path)
 
 ####################################################################################
 

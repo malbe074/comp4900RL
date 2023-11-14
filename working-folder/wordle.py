@@ -85,6 +85,7 @@ class WordleEnvBase(gym.Env):
             self.state_updater = state.update_mask
 
     def step(self, action: int):
+        # print(f'GUESS WORD IS {self.words[action]}')
         if self.done:
             raise ValueError(
                 "You are calling 'step()' even though this "
@@ -121,10 +122,12 @@ class WordleEnvBase(gym.Env):
 
     def reset(self, seed: Optional[int] = None):
         super().reset(seed=seed)
+        np.random.seed(seed) # https://www.w3schools.com/python/ref_random_seed.asp#:~:text=The%20random%20number%20generator%20needs,of%20the%20random%20number%20generator.
         self.state = state.new(self.max_turns)
         self.done = False
 
         self.goal_word = int(np.random.random()*self.allowable_words)
+        # print(f'ENV RESET, GOAL WORD IS {self.words[self.goal_word]}')
         self.board = np.negative(
             np.ones(shape=(self.max_turns, WORDLE_N), dtype=int)) # (only necessary if we're rendering)
         self.guesses = [] # (only necessary if we're rendering)

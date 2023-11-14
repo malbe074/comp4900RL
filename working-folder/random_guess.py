@@ -7,12 +7,9 @@ env = WordleEnv1000()
 obs = env.reset()
 done = False
 while not done:
-    while True:
-        # make a random guess
-        act = env.action_space.sample()
+    # make a random guess
+    act = env.action_space.sample()
 
-        # take a step
-        obs, reward, done, _ = env.step(act)
-        break
-
+    # take a step
+    obs, reward, done, _ = env.step(act)
     env.render()
