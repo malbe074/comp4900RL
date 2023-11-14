@@ -57,8 +57,8 @@ class DQN(nn.Module):
 
     def __init__(self, n_observations, n_actions):
         super(DQN, self).__init__()
-        self.layer1 = nn.Linear(n_observations, 209) 
-        self.layer2 = nn.Linear(209, 209) 
+        self.layer1 = nn.Linear(n_observations, 310) 
+        self.layer2 = nn.Linear(310, 209) 
         self.layer3 = nn.Linear(209, 105) 
         self.layer4 = nn.Linear(105, n_actions) 
         # self.layer4 = nn.Linear(105, 53) 
@@ -105,6 +105,8 @@ n_observations = len(state)
 # Policy network is kinda like a neural network which contains our policy data (i.e. optimal Q values, or at least how to get them)
 # Target network is kinda like the "little brother" of the policy network, that learns at a slightly slower rate. It's a tool used during training to provide stable target values
 policy_net = DQN(n_observations, n_actions).to(device)
+# policy_net.load_state_dict(torch.load('./static_goal_100_words.pth')) # Load data in my saved file
+# policy_net.eval() # Evaluate model
 target_net = DQN(n_observations, n_actions).to(device)
 target_net.load_state_dict(policy_net.state_dict())
 
@@ -237,7 +239,7 @@ def optimize_model():
 if torch.cuda.is_available(): # If you installed the CUDA version of pytorch which makes use of GPU
     num_episodes = 600
 else:
-    num_episodes = 500
+    num_episodes = 100000
 
 for i_episode in range(num_episodes):
     # Initialize the environment and get it's state

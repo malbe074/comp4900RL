@@ -85,7 +85,7 @@ class WordleEnvBase(gym.Env):
             self.state_updater = state.update_mask
 
     def step(self, action: int):
-        print(f'GUESS WORD IS {self.words[action]}')
+        # print(f'GUESS WORD IS {self.words[action]}')
         if self.done:
             raise ValueError(
                 "You are calling 'step()' even though this "
@@ -104,8 +104,8 @@ class WordleEnvBase(gym.Env):
             if state.remaining_steps(self.state) == self.max_turns-1:
                 reward = 0 # No reward for guessing off the bat
             else:
-                reward = REWARD*(state.remaining_steps(self.state) + 1) / self.max_turns
-                # reward = REWARD
+                # reward = REWARD*(state.remaining_steps(self.state) + 1) / self.max_turns
+                reward = REWARD
         elif state.remaining_steps(self.state) == 0:
             self.done = True
             reward = -REWARD
@@ -126,8 +126,8 @@ class WordleEnvBase(gym.Env):
         self.state = state.new(self.max_turns)
         self.done = False
 
-        self.goal_word = 0 # int(np.random.random()*self.allowable_words)
-        print(f'ENV RESET, GOAL WORD IS {self.words[self.goal_word]}')
+        self.goal_word = int(np.random.random()*self.allowable_words) # 0
+        # print(f'ENV RESET, GOAL WORD IS {self.words[self.goal_word]}')
         self.board = np.negative(
             np.ones(shape=(self.max_turns, WORDLE_N), dtype=int)) # (only necessary if we're rendering)
         self.guesses = [] # (only necessary if we're rendering)
