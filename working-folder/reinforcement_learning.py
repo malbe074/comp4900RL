@@ -13,8 +13,8 @@ import torch.nn.functional as F
 import numpy as np
 from wordle import WordleEnv100
 
+# for mac environment
 import os
-
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 env = WordleEnv100()
