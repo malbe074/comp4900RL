@@ -16,6 +16,8 @@ from wordle import WordleEnv100
 import pandas as pd
 import glob
 
+from graph_plotting import plot_experiment
+
 # for mac environment
 import os
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
@@ -287,7 +289,7 @@ if torch.cuda.is_available():  # If you installed the CUDA version of pytorch wh
     torch.cuda.manual_seed_all(seed)
     num_episodes = 600
 else:
-    num_episodes = 25000
+    num_episodes = 1000
 
 for i_episode in range(num_episodes):
     # Initialize the environment and get it's state
@@ -344,34 +346,14 @@ plt.show()
 save_path = './dqn_wordle_data.pth'
 torch.save(policy_net.state_dict(), save_path)
 
-#Comparing Different Results: To run bellow, the number of num_episode must be greater or equal to 1000
+#aving the average duration in a file
 x_df = pd.DataFrame(data)
 experimentParameter = "Alpha" #CHANGE the string based on the parameter you are assigned to experiement (epsilon, batch, reward, discount factor, Q-network weight, hidden layers, space)
-fileName = experimentParameter+str(LR)+".csv" #instead of LR, CHANGE the variable name to the parameter you are assigned to experiement (epsilon, batch, reward, discount factor, Q-network weight, hidden layers, space)
+fileName = experimentParameter+str(LR)+".csv" #CHANGE LR to experiment variable 
 x_df.to_csv(fileName, index=False)
 
-path = "./*.csv"
-
-plt.title('Result')
-plt.xlabel('Every 10th Episode')
-plt.ylabel('Average Duration')
-
-
-plots=[]
-plotColor=[]
-for fname in glob.glob(path):
-    df = pd.read_csv(fname[2:]) #ignoring ./
-
-    p = plt.plot(df)
-
-    plots.append(p[0])
-    #CHANGE the range of fname to only specify the value of the experimented parameter
-    # E.g. if fileName is Alpha5e-05.csv, then str(fname[7:12]) will return 5e-05
-    plotColor.append("$"+experimentParameter+"="+str(fname[7:12])+"$") 
-
-
-plt.legend(plots,plotColor)
-plt.show()
+#This function will crash if the number of eppisode is less than 1000
+#plot_experiment(experimentParameter, LR) #CHANGE LR to experiment variable 
 
 
 ####################################################################################
