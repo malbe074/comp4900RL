@@ -83,3 +83,4 @@ dependencies:
       - pygame-ce==2.3.2
       - swig==4.1.1
       - ufal-pybox2d==2.3.10.2
+      - pandas==2.1.3

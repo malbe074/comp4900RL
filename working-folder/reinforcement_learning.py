@@ -13,6 +13,9 @@ import torch.nn.functional as F
 import numpy as np
 from wordle import WordleEnv100
 
+import pandas as pd
+import glob
+
 # for mac environment
 import os
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
@@ -169,9 +172,10 @@ def select_action(state):
 
 
 episode_durations = []
-
+data = torch.tensor(episode_durations, dtype=torch.float)
 
 def plot_durations(show_result=False):
+    meanResults = torch.tensor(episode_durations, dtype=torch.float)
     plt.figure(1)  # creates a new figure for plotting
     # converts the list episode_durations to a PyTorch tensor named durations_t
     durations_t = torch.tensor(episode_durations, dtype=torch.float)
@@ -188,6 +192,7 @@ def plot_durations(show_result=False):
         # computes the rolling average of durations over a window of 100 episodes and plots it.
         means = durations_t.unfold(0, 100, 1).mean(1).view(-1)
         means = torch.cat((torch.zeros(99), means))
+        meanResults = means
         plt.plot(means.numpy())
 
     plt.pause(0.001)  # pause a bit so that plots are updated
@@ -199,6 +204,8 @@ def plot_durations(show_result=False):
         else:
             # plt.gcf gets current figure (or creates a fig if one doesnt exist) https://matplotlib.org/3.1.1/api/_as_gen/matplotlib.pyplot.gcf.html
             display.display(plt.gcf())
+    if len(durations_t) >= 100:
+        return meanResults
 
 ####################################################################################
 
@@ -323,7 +330,7 @@ for i_episode in range(num_episodes):
 
         if done and i_episode % 10 == 0:
             episode_durations.append(t + 1)
-            plot_durations()
+            data=plot_durations()
 
         if done:
             break
@@ -336,5 +343,35 @@ plt.show()
 # Saving the model https://github.com/christianversloot/machine-learning-articles/blob/main/how-to-save-and-load-a-pytorch-model.md
 save_path = './dqn_wordle_data.pth'
 torch.save(policy_net.state_dict(), save_path)
+
+#Comparing Different Results: To run bellow, the number of num_episode must be greater or equal to 1000
+x_df = pd.DataFrame(data)
+experimentParameter = "Alpha" #CHANGE the string based on the parameter you are assigned to experiement (epsilon, batch, reward, discount factor, Q-network weight, hidden layers, space)
+fileName = experimentParameter+str(LR)+".csv" #instead of LR, CHANGE the variable name to the parameter you are assigned to experiement (epsilon, batch, reward, discount factor, Q-network weight, hidden layers, space)
+x_df.to_csv(fileName, index=False)
+
+path = "./*.csv"
+
+plt.title('Result')
+plt.xlabel('Every 10th Episode')
+plt.ylabel('Average Duration')
+
+
+plots=[]
+plotColor=[]
+for fname in glob.glob(path):
+    df = pd.read_csv(fname[2:]) #ignoring ./
+
+    p = plt.plot(df)
+
+    plots.append(p[0])
+    #CHANGE the range of fname to only specify the value of the experimented parameter
+    # E.g. if fileName is Alpha5e-05.csv, then str(fname[7:12]) will return 5e-05
+    plotColor.append("$"+experimentParameter+"="+str(fname[7:12])+"$") 
+
+
+plt.legend(plots,plotColor)
+plt.show()
+
 
 ####################################################################################
