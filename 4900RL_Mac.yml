@@ -83,3 +83,4 @@ dependencies:
       - torch==2.1.1
       - matplotlib==3.8.2
       - ipython==8.17.2
+      - pandas==2.1.3
