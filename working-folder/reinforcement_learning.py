@@ -279,7 +279,7 @@ if torch.cuda.is_available():  # If you installed the CUDA version of pytorch wh
     torch.cuda.manual_seed_all(seed)
     num_episodes = 600
 else:
-    num_episodes = 30000
+    num_episodes = 40000
 
 for i_episode in range(num_episodes):
     # Initialize the environment and get it's state
@@ -351,7 +351,7 @@ final_mean_result = np.mean(episode_durations[-1000:])
 print('Average duration of last 1000 episodes: ', final_mean_result)
 
 # This function will crash if the number of eppisode is less than 1000
-# plot_experiment(experimentParameter, LR) #CHANGE LR to experiment variable
+# plot_experiment(experimentParameter) #CHANGE make a change inside this function - go to func for more details
 
 
 ####################################################################################

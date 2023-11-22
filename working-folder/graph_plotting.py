@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import glob
 
-def plot_experiment(experimentParameter, experimentVariable):
+def plot_experiment(experimentParameter):
     path = "./*.csv"
 
     plt.title('Result')
@@ -19,8 +19,9 @@ def plot_experiment(experimentParameter, experimentVariable):
         p = plt.plot(df)
 
         plots.append(p[0])
-        #instead of LR, CHANGE the variable name to the parameter you are assigned to experiement (epsilon, batch, reward, discount factor, Q-network weight, hidden layers, space)
-        plotColor.append("$"+experimentParameter+"="+str(experimentVariable)+"$")
+        #CHANGE the range of the file name to only specify the variable number in your file name
+        # E.g. if fileName is Alpha5e-05.csv, then str(fname[7:12]) will return 5e-05
+        plotColor.append("$"+experimentParameter+"="+str(fname[7:12])+"$")
 
     plt.legend(plots,plotColor)
     plt.show()
