@@ -67,7 +67,7 @@ class DQN(nn.Module):
     def __init__(self, n_observations, n_actions):
         super(DQN, self).__init__()
         self.layer1 = nn.Linear(n_observations, 104)
-        self.layer4 = nn.Linear(104, n_actions)
+        self.layer2 = nn.Linear(104, n_actions)
 
 
     # Called with either one element to determine next action, or a batch
