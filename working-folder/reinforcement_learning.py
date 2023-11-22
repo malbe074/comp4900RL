@@ -66,27 +66,16 @@ class DQN(nn.Module):
 
     def __init__(self, n_observations, n_actions):
         super(DQN, self).__init__()
-        self.layer1 = nn.Linear(n_observations, 310)
-        self.layer2 = nn.Linear(310, 209)
-        self.layer3 = nn.Linear(209, 105)
-        self.layer4 = nn.Linear(105, n_actions)
-        # self.layer4 = nn.Linear(105, 53)
-        # self.layer5 = nn.Linear(53, 27)
-        # self.layer6 = nn.Linear(27, 14)
-        # self.layer7 = nn.Linear(14, n_actions)
+        self.layer1 = nn.Linear(n_observations, 104)
+        self.layer4 = nn.Linear(104, n_actions)
+
 
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
     def forward(self, x):  # x can be thought of as a vector of our state features. This is an input to our function
         x = F.relu(self.layer1(x))
-        x = F.relu(self.layer2(x))
-        x = F.relu(self.layer3(x))
-        # x = F.relu(self.layer4(x))
-        # x = F.relu(self.layer5(x))
-        # x = F.relu(self.layer6(x))
-        # return self.layer7(x)
         # We return a tensor from the final layer, theres 1 elt for each action. Each element in this tensor holds the expected state-action value for the associated action.
-        return self.layer4(x)
+        return self.layer2(x)
 
 ####################################################################################
 
