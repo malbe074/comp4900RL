@@ -186,7 +186,7 @@ def plot_durations(show_result=False):
     else:
         plt.clf()  # clear current figure https://matplotlib.org/3.1.1/api/_as_gen/matplotlib.pyplot.clf.html
         plt.title('Training...')
-    plt.xlabel('Every 10th Episode')
+    plt.xlabel('Episode')
     plt.ylabel('Duration')
     plt.plot(durations_t.numpy())
     # Take 100 episode averages and plot them too
@@ -330,9 +330,10 @@ for i_episode in range(num_episodes):
                 TAU + target_net_state_dict[key]*(1-TAU)
         target_net.load_state_dict(target_net_state_dict)
 
-        if done and i_episode % 10 == 0:
+        if done:
             episode_durations.append(t + 1)
-            data=plot_durations()
+            if i_episode % 50 == 0 or i_episode == (num_episodes - 1):
+                data=plot_durations()
 
         if done:
             break
