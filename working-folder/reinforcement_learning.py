@@ -279,7 +279,7 @@ if torch.cuda.is_available():  # If you installed the CUDA version of pytorch wh
     torch.cuda.manual_seed_all(seed)
     num_episodes = 600
 else:
-    num_episodes = 30000
+    num_episodes = 40000
 
 for i_episode in range(num_episodes):
     # Initialize the environment and get it's state
