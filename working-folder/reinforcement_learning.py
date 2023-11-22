@@ -351,7 +351,7 @@ final_mean_result = np.mean(episode_durations[-1000:])
 print('Average duration of last 1000 episodes: ', final_mean_result)
 
 # This function will crash if the number of eppisode is less than 1000
-# plot_experiment(experimentParameter, LR) #CHANGE LR to experiment variable
+# plot_experiment(experimentParameter) #CHANGE make a change inside this function - go to func for more details
 
 
 ####################################################################################
