@@ -356,7 +356,9 @@ experimentParameter = "Alpha"
 fileName = experimentParameter+str(LR)+".csv"
 x_df.to_csv(fileName, index=False)
 
-final_mean_result = np.mean(x_df.to_numpy()[::-10][:10])
+# final_mean_result = np.mean(x_df.to_numpy()[::-10][:10])
+
+final_mean_result = np.mean(episode_durations[-1000:])
 print('Average duration of last 1000 episodes: ', final_mean_result)
 
 # This function will crash if the number of eppisode is less than 1000
