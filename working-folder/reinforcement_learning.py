@@ -93,7 +93,7 @@ class DQN(nn.Module):
 # TAU is the update rate of the target network
 # LR is the learning rate of the ``AdamW`` optimizer # Shaun: This is kinda like the learning rate, alpha
 BATCH_SIZE = 128
-GAMMA = 0.99
+GAMMA = 0.9
 EPS_START = 1.0
 EPS_END = 0.05
 EPS_DECAY = 1000
@@ -164,6 +164,7 @@ def select_action(state):
 
 episode_durations = []
 data = torch.tensor(episode_durations, dtype=torch.float)
+
 
 def plot_durations(show_result=False):
     meanResults = torch.tensor(episode_durations, dtype=torch.float)
@@ -278,7 +279,7 @@ if torch.cuda.is_available():  # If you installed the CUDA version of pytorch wh
     torch.cuda.manual_seed_all(seed)
     num_episodes = 600
 else:
-    num_episodes = 1000
+    num_episodes = 30000
 
 for i_episode in range(num_episodes):
     # Initialize the environment and get it's state
@@ -322,7 +323,7 @@ for i_episode in range(num_episodes):
         if done:
             episode_durations.append(t + 1)
             if i_episode % 50 == 0 or i_episode == (num_episodes - 1):
-                data=plot_durations()
+                data = plot_durations()
 
         if done:
             break
@@ -336,14 +337,21 @@ plt.show()
 save_path = './dqn_wordle_data.pth'
 torch.save(policy_net.state_dict(), save_path)
 
-#aving the average duration in a file
+# aving the average duration in a file
 x_df = pd.DataFrame(data)
-experimentParameter = "Alpha" #CHANGE the string based on the parameter you are assigned to experiement (epsilon, batch, reward, discount factor, Q-network weight, hidden layers, space)
-fileName = experimentParameter+str(LR)+".csv" #CHANGE LR to experiment variable 
+# CHANGE the string based on the parameter you are assigned to experiement (epsilon, batch, reward, discount factor, Q-network weight, hidden layers, space)
+experimentParameter = "Alpha"
+# CHANGE LR to experiment variable
+fileName = experimentParameter+str(LR)+".csv"
 x_df.to_csv(fileName, index=False)
 
-#This function will crash if the number of eppisode is less than 1000
-#plot_experiment(experimentParameter, LR) #CHANGE LR to experiment variable 
+# final_mean_result = np.mean(x_df.to_numpy()[::-10][:10])
+
+final_mean_result = np.mean(episode_durations[-1000:])
+print('Average duration of last 1000 episodes: ', final_mean_result)
+
+# This function will crash if the number of eppisode is less than 1000
+# plot_experiment(experimentParameter, LR) #CHANGE LR to experiment variable
 
 
 ####################################################################################
