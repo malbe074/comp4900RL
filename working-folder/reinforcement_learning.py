@@ -104,7 +104,7 @@ class DQN(nn.Module):
 # TAU is the update rate of the target network
 # LR is the learning rate of the ``AdamW`` optimizer # Shaun: This is kinda like the learning rate, alpha
 BATCH_SIZE = 128
-GAMMA = 0.99
+GAMMA = 0.9
 EPS_START = 0.9
 EPS_END = 0.05
 EPS_DECAY = 1000
@@ -290,7 +290,7 @@ if torch.cuda.is_available():  # If you installed the CUDA version of pytorch wh
     torch.cuda.manual_seed_all(seed)
     num_episodes = 600
 else:
-    num_episodes = 1000
+    num_episodes = 30000
 
 for i_episode in range(num_episodes):
     # Initialize the environment and get it's state
