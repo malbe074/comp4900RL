@@ -4,24 +4,31 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import glob
 
+
 def plot_experiment(experimentParameter):
     path = "./*.csv"
 
     plt.title('Result')
-    plt.xlabel('Every 10th Episode')
+    plt.xlabel('Episode')
     plt.ylabel('Average Duration')
 
-    plots=[]
-    plotColor=[]
-    for fname in glob.glob(path):
-        df = pd.read_csv(fname[2:]) #ignoring ./
+    plots = []
+    plotColor = []
+    fnames = glob.glob(path)
+    fnames.sort()
+    for fname in fnames:
+        df = pd.read_csv(fname[2:])  # ignoring ./
 
         p = plt.plot(df)
 
         plots.append(p[0])
-        #CHANGE the range of the file name to only specify the variable number in your file name
+        # CHANGE the range of the file name to only specify the variable number in your file name
         # E.g. if fileName is Alpha5e-05.csv, then str(fname[7:12]) will return 5e-05
-        plotColor.append("$"+experimentParameter+"="+str(fname[7:12])+"$")
+        plotColor.append("$"+experimentParameter+"=" +
+                         str(fname[2:]).rstrip('.csv')+"$")
 
-    plt.legend(plots,plotColor)
+    plt.legend(plots, plotColor)
     plt.show()
+
+
+plot_experiment('Reward Structure')

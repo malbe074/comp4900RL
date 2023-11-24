@@ -9,26 +9,30 @@ from gymnasium import spaces
 import numpy as np
 
 import state
-from const import WORDLE_N, REWARD
+from const import WORDLE_N, REWARD, DENSE_SUCCESS_REWARD, DENSE_PENALTY_REWARD
 
 import colorama
 from colorama import Fore, Style, init
+from collections import Counter
 
-init(autoreset=True) # So that the colour defaults to white and we don't have to manually change it in between print statements
+# So that the colour defaults to white and we don't have to manually change it in between print statements
+init(autoreset=True)
 
 CUR_PATH = os.environ.get('PYTHONPATH', '.')
-import os
 dirname = os.path.dirname(__file__)
 VALID_WORDS_PATH = f'{dirname}/data/wordle_words.txt'
 
 # loads the words from the wordle_words.txt file
-def _load_words(limit: Optional[int]=None) -> List[str]:
+
+
+def _load_words(limit: Optional[int] = None) -> List[str]:
     with open(VALID_WORDS_PATH, 'r') as f:
         lines = [x.strip().upper() for x in f.readlines()]
         if not limit:
             return lines
         else:
             return lines[:limit]
+
 
 class WordleEnvBase(gym.Env):
     """
@@ -47,17 +51,19 @@ class WordleEnvBase(gym.Env):
         Random goal word
         Initial state with turn 0, all chars Unvisited + Maybe
     """
+
     def __init__(self, words: List[str],
                  max_turns: int,
                  allowable_words: Optional[int] = None,
-                 frequencies: Optional[List[float]]=None,
-                 mask_based_state_updates: bool=False):
-        assert all(len(w) == WORDLE_N for w in words), f'Not all words of length {WORDLE_N}, {words}'
+                 frequencies: Optional[List[float]] = None,
+                 mask_based_state_updates: bool = False):
+        assert all(
+            len(w) == WORDLE_N for w in words), f'Not all words of length {WORDLE_N}, {words}'
         self.words = words
         self.max_turns = max_turns
         self.allowable_words = allowable_words
         self.mask_based_state_updates = mask_based_state_updates
-        
+
         # if no allowable words are specified, use all words
         if not self.allowable_words:
             self.allowable_words = len(self.words)
@@ -66,17 +72,20 @@ class WordleEnvBase(gym.Env):
         # if frequencies are specified, normalize them
         # gives each word a probability of being the goal word
         if frequencies:
-            assert len(words) == len(frequencies), f'{len(words), len(frequencies)}'
-            self.frequencies = np.array(frequencies, dtype=np.float32) / sum(frequencies)
+            assert len(words) == len(
+                frequencies), f'{len(words), len(frequencies)}'
+            self.frequencies = np.array(
+                frequencies, dtype=np.float32) / sum(frequencies)
 
         # set up the action and observation spaces
         self.action_space = spaces.Discrete(len(self.words))
-        self.observation_space = spaces.MultiDiscrete(state.get_nvec(self.max_turns))
+        self.observation_space = spaces.MultiDiscrete(
+            state.get_nvec(self.max_turns))
 
         self.done = True
         self.goal_word: int = -1
 
-        self.guesses = [] # only necessary if we're rendering
+        self.guesses = []  # only necessary if we're rendering
         self.state: state.WordleState = None
 
         # define which function to use to update the state
@@ -97,18 +106,37 @@ class WordleEnvBase(gym.Env):
                                         word=self.words[action],
                                         goal_word=self.words[self.goal_word])
 
+        def get_dense_reward():
+
+            word = self.words[action]
+            goal_word = self.words[self.goal_word]
+            mask = state.get_mask(word, goal_word)
+
+            counts = Counter(mask)
+            num_yellow = counts.get(1, 0)  # 1 = yellow in position
+            num_green = counts.get(2, 0)  # 2 = green in position
+
+            # 2 points per yellow letter, 5 points per green letter
+            return num_yellow * 2 + num_green * 5
+
         reward = 0
         if action == self.goal_word:
             self.done = True
-            #reward = REWARD
+            # reward = REWARD
             if state.remaining_steps(self.state) == self.max_turns-1:
-                reward = 0 # No reward for guessing off the bat
+                reward = 0  # No reward for guessing off the bat
             else:
                 # reward = REWARD*(state.remaining_steps(self.state) + 1) / self.max_turns
                 reward = REWARD
+                # reward = DENSE_SUCCESS_REWARD  # if using dense reward structure
         elif state.remaining_steps(self.state) == 0:
             self.done = True
             reward = -REWARD
+            # reward = DENSE_PENALTY_REWARD  # if using dense reward structure
+
+        # if using dense reward
+        # else:
+        #     reward = get_dense_reward()  # if using desne reward structure
 
         # update game board (only necessary if we're rendering)
         # board_row_idx = self.max_turns - state.remaining_steps(self.state) - 1
@@ -119,14 +147,13 @@ class WordleEnvBase(gym.Env):
 
         return self.state.copy(), reward, self.done, {"goal_id": self.goal_word}
 
-
     def reset(self, seed: Optional[int] = None):
         super().reset(seed=seed)
         # np.random.seed(seed) # https://www.w3schools.com/python/ref_random_seed.asp#:~:text=The%20random%20number%20generator%20needs,of%20the%20random%20number%20generator.
         self.state = state.new(self.max_turns)
         self.done = False
 
-        self.goal_word = int(np.random.random()*self.allowable_words) # 0
+        self.goal_word = int(np.random.random()*self.allowable_words)  # 0
         # print(f'ENV RESET, GOAL WORD IS {self.words[self.goal_word]}')
         # self.board = np.negative(
         #     np.ones(shape=(self.max_turns, WORDLE_N), dtype=int)) # (only necessary if we're rendering)
@@ -134,7 +161,7 @@ class WordleEnvBase(gym.Env):
 
         return self.state.copy()
 
-    def render(self, mode="human", hide_goal_word: bool=False):
+    def render(self, mode="human", hide_goal_word: bool = False):
         assert mode in ["human"], "Invalid mode, must be \"human\""
         print('###################################################')
         for i in range(len(self.guesses)):
@@ -152,25 +179,29 @@ class WordleEnvBase(gym.Env):
         # Here, we're printing out the keyboard. Iterate over each letter in the alphabet
         for i in range(26):
             letter = chr(ord('A') + i)
-            if self.state[1 + i] == 0: # If the letter has not been attempted yet, colour it bright white
+            # If the letter has not been attempted yet, colour it bright white
+            if self.state[1 + i] == 0:
                 print(Fore.WHITE + Style.BRIGHT + letter + " ", end='')
             else:
                 isColorDetermined = False
-                for j in range(WORDLE_N): # If the letter is green in a single one of the 5 slots, colour that letter green on the keyboard
+                # If the letter is green in a single one of the 5 slots, colour that letter green on the keyboard
+                for j in range(WORDLE_N):
                     if self.state[1 + 26 + i * 3 * WORDLE_N + 2 + j * 3] == 1:
                         print(Fore.GREEN + Style.BRIGHT + letter + " ", end='')
                         isColorDetermined = True
                         break
-                if not isColorDetermined: # Only bother checking this if the letter is not green
-                    for j in range(WORDLE_N):  # If the letter is yellow in a single one of the 5 slots, colour that letter yellow on the keyboard
+                if not isColorDetermined:  # Only bother checking this if the letter is not green
+                    # If the letter is yellow in a single one of the 5 slots, colour that letter yellow on the keyboard
+                    for j in range(WORDLE_N):
                         if self.state[1 + 26 + i * 3 * WORDLE_N + 1 + j * 3] == 1:
-                            print(Fore.YELLOW + Style.BRIGHT + letter + " ", end='')
+                            print(Fore.YELLOW + Style.BRIGHT +
+                                  letter + " ", end='')
                             isColorDetermined = True
                             break
-                if not isColorDetermined: # Only print this if letter is not green or yellow (i.e. the letter is definitely not in the word)
+                # Only print this if letter is not green or yellow (i.e. the letter is definitely not in the word)
+                if not isColorDetermined:
                     print(Fore.BLACK + Style.BRIGHT + letter + " ", end='')
 
-        
         if not hide_goal_word:
             print()
             print("HEY, GOAL WORD IS ", self.words[self.goal_word])
@@ -180,7 +211,6 @@ class WordleEnvBase(gym.Env):
             print()
             print('###################################################')
             print()
-
 
     def set_goal_word(self, goal_word: str):
         self.goal_word = self.words.index(goal_word)
