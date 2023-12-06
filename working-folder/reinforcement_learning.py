@@ -12,17 +12,25 @@ import torch.optim as optim  # optimisation
 import torch.nn.functional as F
 import numpy as np
 from wordle import WordleEnv100
+from wordle import WordleEnv200
+from wordle import WordleEnv300
+from wordle import WordleEnv400
+from wordle import WordleEnv500
+from wordle import WordleEnv600
+from wordle import WordleEnv1000
 
 import pandas as pd
 import glob
+import json
 
 from graph_plotting import plot_experiment
+
+import time
 
 # for mac environment
 import os
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
-env = WordleEnv100()
 
 # set up matplotlib
 # hecks if the string 'inline' is present in the name of the current backend.
@@ -73,6 +81,15 @@ class DQN(nn.Module):
         super(DQN, self).__init__()
         self.layer1 = nn.Linear(n_observations, 104)
         self.layer2 = nn.Linear(104, n_actions)
+        # self.layer3 = nn.Linear(208, n_actions)
+        # nn.init.normal_(self.layer1.weight)
+        # nn.init.normal_(self.layer2.weight)
+        # nn.init.uniform_(self.layer1.weight, a=0.0, b=.1)
+        # nn.init.uniform_(self.layer2.weight, a=0.0, b=.1)
+        # nn.init.kaiming_uniform_(self.layer1.weight, mode='fan_in', nonlinearity='relu')
+        # nn.init.kaiming_uniform_(self.layer2.weight, mode='fan_in', nonlinearity='relu')
+        # nn.init.xavier_uniform_(self.layer1.weight)
+        # nn.init.xavier_uniform_(self.layer2.weight)
 
 
     # Called with either one element to determine next action, or a batch
@@ -92,42 +109,78 @@ class DQN(nn.Module):
 # EPS_DECAY controls the rate of exponential decay of epsilon, higher means a slower decay
 # TAU is the update rate of the target network
 # LR is the learning rate of the ``AdamW`` optimizer # Shaun: This is kinda like the learning rate, alpha
-BATCH_SIZE = 128
-GAMMA = 0.9
+BATCH_SIZE = 1024
+GAMMA = 0.85
 EPS_START = 1.0
 EPS_END = 0.05
 EPS_DECAY = 1000
 TAU = 0.005
 LR = 5e-5  # halve learning rate
 
+
+load_path = './dqn_wordle_data500_18m.pth'
+
+
 # Setting up seeds
 seed = 42  # https://stackoverflow.com/questions/75943057/i-cant-find-how-to-reproducibly-run-a-python-gymnasium-taxi-v3-environment
 np.random.seed(seed)
 # https://www.w3schools.com/python/ref_random_seed.asp#:~:text=The%20random%20number%20generator%20needs,of%20the%20random%20number%20generator.
 random.seed(seed)
-# https://gymnasium.farama.org/api/spaces/fundamental/#gymnasium.spaces.Discrete.sample
-env.action_space.seed(seed)
+
 # https://pytorch.org/docs/stable/generated/torch.manual_seed.html
 torch.manual_seed(seed)
 
+# SETUP WARM START ENVIRONMENT
+warm_start = False
+restart = True
+if warm_start:
+    env_orig = WordleEnv400()  # CHANGE THIS TO THE ENVIRONMENT YOU WANT TO WARM START FROM
+    original_n_actions = env_orig.action_space.n
+    orig_state = env_orig.reset(seed=seed)
+    original_n_observations = len(orig_state)
+    original_model = DQN(original_n_observations, original_n_actions).to(device)
+    original_model.load_state_dict(torch.load(load_path))
 
-# Get number of actions from gym action space
-n_actions = env.action_space.n
-# Get the number of state observations
-# reset() should be called with a seed right after initialization and then never again. https://gymnasium.farama.org/api/env/#gymnasium.Env.reset
+
+# SETUP ENVIRONMENT TRAINING ENVIRONMENT
+env = WordleEnv500() # CHANGE THIS TO THE ENVIRONMENT YOU WANT TO RUN
+env.action_space.seed(seed)    # https://gymnasium.farama.org/api/spaces/fundamental/#gymnasium.spaces.Discrete.sample
+n_actions = env.action_space.n # reset() should be called with a seed right after initialization and then never again. https://gymnasium.farama.org/api/env/#gymnasium.Env.reset
 state = env.reset(seed=seed)
 n_observations = len(state)
 
-# Policy network is kinda like a neural network which contains our policy data (i.e. optimal Q values, or at least how to get them)
-# Target network is kinda like the "little brother" of the policy network, that learns at a slightly slower rate. It's a tool used during training to provide stable target values
+
 policy_net = DQN(n_observations, n_actions).to(device)
-# policy_net.load_state_dict(torch.load('./static_goal_100_words.pth')) # Load data in my saved file
+if warm_start:
+    print("Warm Starting")
+    assert original_n_observations == n_observations, "observation space should be the same"
+    policy_net.layer1.weight.data = original_model.layer1.weight.data.clone()
+    policy_net.layer1.bias.data = original_model.layer1.bias.data.clone()
+    # for param in policy_net.layer1.parameters():
+    #     param.requires_grad = False
+    # Redefine the second layer for the new action space
+    # policy_net.layer2 = torch.nn.Linear(104, n_actions)  # Adjust the output size to the new action space
+
+    # policy_net.layer2.weight.data = original_model.layer2.weight.data.clone()
+    # policy_net.layer2.bias.data = original_model.layer2.bias.data.clone()
+elif restart:
+    print("Restarting")
+    policy_net.load_state_dict(torch.load(load_path))
+
+
 # policy_net.eval() # Evaluate model
+# eval = True
 target_net = DQN(n_observations, n_actions).to(device)
 target_net.load_state_dict(policy_net.state_dict())
 
+#orig optimizer
 # initializing an AdamW optimizer for the policy_net neural network.
 optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
+
+# initializing an AdamW optimizer for the trainable parameters of policy_net
+# optimizer = optim.AdamW(filter(lambda p: p.requires_grad, policy_net.parameters()), lr=LR, amsgrad=True)
+
+
 # https://pytorch.org/docs/stable/optim.html
 # optim is constructing an optimizer object that will hold the current state (e.g. wordle 416 array) and will update the parameters (i.e. the w1, w2, etc within our neural network) based on the computed gradients (want w1, w2 that minimizes objective func)
 # 1st arg is an iterable containing the parameters (all should be 'Variable's) to optimize.
@@ -165,7 +218,7 @@ def select_action(state):
 episode_durations = []
 data = torch.tensor(episode_durations, dtype=torch.float)
 
-# this function plots the durations of episodes as a function of every 100 episodes and also plots the average duration over the last 1000 episodes. 
+# this function plots the durations of episodes as a function of every 100 episodes and also plots the average duration over the last 1000 episodes.
 def plot_durations(show_result=False):
     meanResults = torch.tensor(episode_durations, dtype=torch.float)
     plt.figure(1)  # creates a new figure for plotting
@@ -277,9 +330,16 @@ def optimize_model():
 if torch.cuda.is_available():  # If you installed the CUDA version of pytorch which makes use of GPU
     # Set the seed if cuda available https://pytorch.org/docs/stable/generated/torch.cuda.manual_seed_all.html
     torch.cuda.manual_seed_all(seed)
-    num_episodes = 600
+    num_episodes = 200000
+    print("Using GPU")
 else:
     num_episodes = 40000
+
+
+win_count = []
+missed_words_dict = {}
+
+start_time = time.time()
 
 for i_episode in range(num_episodes):
     # Initialize the environment and get it's state
@@ -287,11 +347,15 @@ for i_episode in range(num_episodes):
     state = torch.tensor(state, dtype=torch.float32,
                          device=device).unsqueeze(0)
 
+    won = False
+
     for t in count():  # This python loop loops forever until we reach the end of the episode (at which point we break outta the loop). t takes on values 0, 1, 2 3...
         # 1) Choose action using eps-greedy policy
         action = select_action(state)
         # 2) Get the r and s'.
         observation, reward, terminated, truncated = env.step(action.item())
+        if reward == 10:
+            won = True
         reward = torch.tensor([reward], device=device)
         done = terminated
 
@@ -324,33 +388,50 @@ for i_episode in range(num_episodes):
             episode_durations.append(t + 1)
             if i_episode % 50 == 0 or i_episode == (num_episodes - 1):
                 data = plot_durations()
+            if i_episode % 10000 == 0:
+                end_time = time.time()
+                print("Episode: ", i_episode, "Time taken: ", end_time - start_time)
 
         if done:
+            win_count.append(episode_durations[-1] if won else -1)
+            if not won:
+                missed_word = env.words[truncated["goal_id"]]
+                if missed_word in missed_words_dict:
+                    missed_words_dict[missed_word] += 1
+                else:
+                    missed_words_dict[missed_word] = 1
             break
+
+end_time = time.time()
+print("Time taken: ", end_time - start_time)
 
 print('Complete')
 plot_durations(show_result=True)
 plt.ioff()
 plt.show()
 
+
+
 # Saving the model https://github.com/christianversloot/machine-learning-articles/blob/main/how-to-save-and-load-a-pytorch-model.md
-save_path = './dqn_wordle_data.pth'
+save_path = './dqn_wordle_data500_2m.pth'
 torch.save(policy_net.state_dict(), save_path)
 
-# aving the average duration in a file
+# saving the average duration in a file
 x_df = pd.DataFrame(data)
-# CHANGE the string based on the parameter you are assigned to experiement (epsilon, batch, reward, discount factor, Q-network weight, hidden layers, space)
-experimentParameter = "NA"
-other = "Opitmal-Parameters"
-# CHANGE LR to experiment variable
-if (experimentParameter == "Epsilon"):
-    fileName = experimentParameter+"["+str(EPS_START)+", "+str(EPS_END)+", "+str(EPS_DECAY)+"]"+".csv"
-elif (experimentParameter == "NA"):
-    fileName = other+".csv"
-else:
-    fileName = experimentParameter+str(LR)+".csv"
+episode_durations_df = pd.DataFrame(episode_durations)
+episode_durations_wins_df = pd.DataFrame(win_count)
 
-x_df.to_csv(fileName, index=False)
+# CHANGE the string based on the parameter you are assigned to experiement (epsilon, batch, reward, discount factor, Q-network weight, hidden layers, space)
+experimentParameter = "Warm_Start500"
+# CHANGE LR to experiment variable
+WEIGHTS  = "env500-18-2m"
+fileName = experimentParameter+str(WEIGHTS)
+x_df.to_csv(fileName+".csv", index=False)
+episode_durations_df.to_csv(fileName + "episode_durations.csv", index=False)
+episode_durations_wins_df.to_csv(fileName + "episode_durations_wins.csv", index=False)
+
+with open(fileName + 'missed_words.json', 'w') as file:
+    json.dump(missed_words_dict, file, indent=4)
 
 # final_mean_result = np.mean(x_df.to_numpy()[::-10][:10])
 
