@@ -31,4 +31,4 @@ def plot_experiment(experimentParameter):
     plt.show()
 
 
-plot_experiment('Reward Structure')
+plot_experiment('')

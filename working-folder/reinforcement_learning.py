@@ -165,7 +165,7 @@ def select_action(state):
 episode_durations = []
 data = torch.tensor(episode_durations, dtype=torch.float)
 
-
+# this function plots the durations of episodes as a function of every 100 episodes and also plots the average duration over the last 100 episodes. 
 def plot_durations(show_result=False):
     meanResults = torch.tensor(episode_durations, dtype=torch.float)
     plt.figure(1)  # creates a new figure for plotting
@@ -340,9 +340,16 @@ torch.save(policy_net.state_dict(), save_path)
 # aving the average duration in a file
 x_df = pd.DataFrame(data)
 # CHANGE the string based on the parameter you are assigned to experiement (epsilon, batch, reward, discount factor, Q-network weight, hidden layers, space)
-experimentParameter = "Alpha"
+experimentParameter = "NA"
+other = "Opitmal-Parameters"
 # CHANGE LR to experiment variable
-fileName = experimentParameter+str(LR)+".csv"
+if (experimentParameter == "Epsilon"):
+    fileName = experimentParameter+"["+str(EPS_START)+", "+str(EPS_END)+", "+str(EPS_DECAY)+"]"+".csv"
+elif (experimentParameter == "NA"):
+    fileName = other+".csv"
+else:
+    fileName = experimentParameter+str(LR)+".csv"
+
 x_df.to_csv(fileName, index=False)
 
 # final_mean_result = np.mean(x_df.to_numpy()[::-10][:10])
