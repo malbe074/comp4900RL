@@ -139,11 +139,11 @@ class WordleEnvBase(gym.Env):
         #     reward = get_dense_reward()  # if using desne reward structure
 
         # update game board (only necessary if we're rendering)
-        # board_row_idx = self.max_turns - state.remaining_steps(self.state) - 1
-        # self.board[board_row_idx] = state.get_mask(word= self.words[action], goal_word= self.words[self.goal_word])
+        board_row_idx = self.max_turns - state.remaining_steps(self.state) - 1
+        self.board[board_row_idx] = state.get_mask(word= self.words[action], goal_word= self.words[self.goal_word])
 
         # update previous guesses made (only necessary if we're rendering)
-        # self.guesses.append(self.words[action])
+        self.guesses.append(self.words[action])
 
         return self.state.copy(), reward, self.done, {"goal_id": self.goal_word}
 
@@ -155,9 +155,9 @@ class WordleEnvBase(gym.Env):
 
         self.goal_word = int(np.random.random()*self.allowable_words)  # 0
         # print(f'ENV RESET, GOAL WORD IS {self.words[self.goal_word]}')
-        # self.board = np.negative(
-        #     np.ones(shape=(self.max_turns, WORDLE_N), dtype=int)) # (only necessary if we're rendering)
-        # self.guesses = [] # (only necessary if we're rendering)
+        self.board = np.negative(
+            np.ones(shape=(self.max_turns, WORDLE_N), dtype=int)) # (only necessary if we're rendering)
+        self.guesses = [] # (only necessary if we're rendering)
 
         return self.state.copy()
 
@@ -227,6 +227,10 @@ class WordleEnv10(WordleEnvBase):
 class WordleEnv100(WordleEnvBase):
     def __init__(self):
         super().__init__(words=_load_words(100), max_turns=6)
+
+class WordleEnv500(WordleEnvBase):
+    def __init__(self):
+        super().__init__(words=_load_words(500), max_turns=6)
 
 
 class WordleEnv100OneAction(WordleEnvBase):
