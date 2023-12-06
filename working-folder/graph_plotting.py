@@ -31,4 +31,8 @@ def plot_experiment(experimentParameter):
     plt.show()
 
 
-plot_experiment('')
+if __name__ == "__main__":
+
+    plot_experiment('')
+
+
