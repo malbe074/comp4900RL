@@ -9,6 +9,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Categorical # https://pytorch.org/docs/stable/distributions.html#categorical
+import matplotlib
+import matplotlib.pyplot as plt
 # Example:
 # >>> m = Categorical(torch.tensor([ 0.25, 0.25, 0.25, 0.25 ]))
 # >>> m.sample()  # equal probability of 0, 1, 2, 3
@@ -35,11 +37,25 @@ parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='interval between training status logs (default: 10)')
 args = parser.parse_args() # printing args gives # Namespace(gamma=0.99, seed=543, render=False, log_interval=10)
 
-
+# Better graph recording
+# Try changing neural network structure (dont share a common layer?)
+# Gradient clipping?
+# Encourage/discourage exploration via softmax temperatures
+# Normalizing returns
 
 env = WordleEnv100()
 state = env.reset(seed=args.seed)
 torch.manual_seed(args.seed)
+
+# set up matplotlib
+# hecks if the string 'inline' is present in the name of the current backend.
+is_ipython = 'inline' in matplotlib.get_backend()
+# checks if code is running in an IPython environment (like Jupyter Notebook)
+if is_ipython:
+    # for controlling the display of output, including the display of Matplotlib plots
+    from IPython import display
+
+plt.ion()  # ion stands for "interactive mode." (display plots dynamically)
 
 
 SavedAction = namedtuple('SavedAction', ['log_prob', 'value']) # The tuple is <'log_prob', 'value'> and represents a SavedAction
@@ -54,9 +70,13 @@ class Policy(nn.Module):
 
         # actor's layer
         self.action_head = nn.Linear(128, n_action) # our theta
+        # self.action_layer = nn.Linear(n_observations, 104)
+        # self.action_head = nn.Linear(128, n_action) # our theta
 
         # critic's layer
-        self.value_head = nn.Linear(128, 1) # state value v^, I think, not q^
+        self.value_head = nn.Linear(128, 1) # state value v^, not q^
+        # self.value_layer = nn.Linear(n_observations, 104)
+        # self.value_head = nn.Linear(128, 1) # state value v^, I think, not q^
 
         # action & reward buffer
         self.saved_actions = []
@@ -66,16 +86,18 @@ class Policy(nn.Module):
         """
         forward of both actor and critic
         """
-        # print("PRINTING INPUT X")
-        # print(x)
         x = F.relu(self.affine1(x))
+        # a = F.relu(self.action_layer(x))
+        # v = F.relu(self.value_layer(x))
 
         # actor: choses action to take from state s_t
         # by returning probability of each action
         action_prob = F.softmax(self.action_head(x), dim=-1, dtype=torch.float64)
+        # action_prob = F.softmax(self.action_head(a), dim=-1, dtype=torch.float64)
 
         # critic: evaluates being in the state s_t
         state_values = self.value_head(x)
+        # state_values = self.value_head(v)
 
         # return values for both actor and critic as a tuple of 2 values:
         # 1. a list with the probability of each action over the action space
@@ -84,7 +106,7 @@ class Policy(nn.Module):
 
 n_observations = len(state)
 model = Policy(n_observations, env.action_space.n)
-optimizer = optim.AdamW(model.parameters(), lr=3e-2)
+optimizer = optim.AdamW(model.parameters(), lr=1e-4)
 eps = np.finfo(np.float32).eps.item() # uses NumPy to obtain the machine epsilon for the float32 data type. Machine epsilon is the difference between 1 and the smallest number greater than 1 that is representable in the given floating-point data type.
 
 
@@ -125,9 +147,10 @@ def finish_episode():
     # returns for an episode looks like: tensor([-9.51, -9.606, -9.703, -9.801, -9.9, -10.0]). -10 reward in Wordle for not guessing word, earlier terms are discounted
     # IF you guess the word right away, your returns is a single-element tensor: tensor([0.]) 
     
-    # returns = (returns - returns.mean()) / (returns.std() + eps) # eps is a v small number, can ignore. Essentially this is normalization- shifting the return values so the mean is 0. 
+    # if returns.size()[0] > 1: # If the returns tensor has more than one element, we can take .std() safely.
+    #     returns = (returns - returns.mean()) / (returns.std() + eps) # eps is a v small number, can ignore. Essentially this is normalization- shifting the return values so the mean is 0. 
     # Im commenting out this step as I believe it's unnecessary based on https://ai.stackexchange.com/questions/10196/why-does-is-make-sense-to-normalize-rewards-per-episode-in-reinforcement-learnin
-    # At any rate, this line is also buggy, becaues taking std of a single elt tensor, tensor([0.]), causes NaN issues https://github.com/pytorch/pytorch/issues/29372
+    # This line can be buggy, becaues taking std of a single elt tensor, tensor([0.]), causes NaN issues https://github.com/pytorch/pytorch/issues/29372
     # If I included this line, then new returns is tensor([ 1.3273,  0.8035,  0.2744, -0.2601, -0.7999, -1.3452])
 
     # saved_actions is a list of SavedAction tuples e.g. [<'log_prob', 'value'>, <'log_prob', 'value'>,...], where log_prob and value are both single-elt tensors. 
@@ -142,13 +165,9 @@ def finish_episode():
 
         # calculate actor (policy) loss
         policy_losses.append(-log_prob * advantage)
-        # print("POLICY LOSSES!")
-        # print(policy_losses)
 
         # calculate critic (value) loss using L1 smooth loss
         value_losses.append(F.smooth_l1_loss(value, torch.tensor([R])))
-        # print("VALUE LOSSES")
-        # print(value_losses)
 
     # reset gradients
     optimizer.zero_grad()
@@ -164,7 +183,7 @@ def finish_episode():
     # In-place gradient clipping- My addition
     # uses PyTorch's gradient clipping utility to clip the gradients of the parameters of the policy_net to a specified maximum value, in this case, 100. Gradient clipping is a technique used to prevent exploding gradients during training, which can lead to numerical instability.
     # torch.nn.utils.clip_grad_value_(model.parameters(), 0.5)
-    torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+    # torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
 
     optimizer.step()
 
@@ -172,12 +191,49 @@ def finish_episode():
     del model.rewards[:]
     del model.saved_actions[:]
 
+episode_durations = []
+data = torch.tensor(episode_durations, dtype=torch.float)
+
+# this function plots the durations of episodes as a function of every 100 episodes and also plots the average duration over the last 1000 episodes. 
+def plot_durations(show_result=False):
+    meanResults = torch.tensor(episode_durations, dtype=torch.float)
+    plt.figure(1)  # creates a new figure for plotting
+    # converts the list episode_durations to a PyTorch tensor named durations_t
+    durations_t = torch.tensor(episode_durations, dtype=torch.float)
+    if show_result:
+        plt.title('Result')
+    else:
+        plt.clf()  # clear current figure https://matplotlib.org/3.1.1/api/_as_gen/matplotlib.pyplot.clf.html
+        plt.title('Training...')
+    plt.xlabel('Episode')
+    plt.ylabel('Duration')
+    plt.plot(durations_t.numpy())
+    # Take 100 episode averages and plot them too
+    if len(durations_t) >= 100:
+        # computes the rolling average of durations over a window of 100 episodes and plots it.
+        means = durations_t.unfold(0, 100, 1).mean(1).view(-1)
+        means = torch.cat((torch.zeros(99), means))
+        meanResults = means
+        plt.plot(means.numpy())
+
+    plt.pause(0.001)  # pause a bit so that plots are updated
+    if is_ipython:
+        if not show_result:
+            display.display(plt.gcf())
+            # Clear the output of the current cell receiving output https://ipython.org/ipython-doc/3/api/generated/IPython.display.html#functions
+            display.clear_output(wait=True)
+        else:
+            # plt.gcf gets current figure (or creates a fig if one doesnt exist) https://matplotlib.org/3.1.1/api/_as_gen/matplotlib.pyplot.gcf.html
+            display.display(plt.gcf())
+    if len(durations_t) >= 100:
+        return meanResults
 
 def main():
     running_reward = 10 # This is a running value, which starts out at 10, but gets updated with EACH EPISODE (not each step)! It's a weighted avg between the episode reward (NEW VALUE) and the running reward (OLD VALUE).
+    num_episodes = 40000
 
     # run infinitely many episodes
-    for i_episode in count(1):
+    for i_episode in range(num_episodes): # count(1):
 
         # reset environment and episode reward
         state = env.reset()
@@ -185,7 +241,7 @@ def main():
 
         # for each episode, only run 9999 steps so that we don't
         # infinite loop while learning. BUT FOR WORDLE, ONLY RUN 6 Steps
-        for t in range(1, 10000):
+        for t in count():
 
             # select action from policy
             action = select_action(state)
@@ -199,13 +255,16 @@ def main():
             model.rewards.append(reward) # append to the model's list of rewards at EVERY step (lotta 0s)
             ep_reward += reward
             if done:
+                episode_durations.append(t + 1)
+                if i_episode % 50 == 0 or i_episode == (num_episodes - 1):
+                    data = plot_durations()
                 break
 
         # update cumulative reward
         running_reward = 0.05 * ep_reward + (1 - 0.05) * running_reward
 
         # perform backprop
-        finish_episode()
+        finish_episode() # Optimize at the end of the ep, not after each step
 
         # log results
         if i_episode % args.log_interval == 0:
@@ -217,6 +276,10 @@ def main():
         #     print("Solved! Running reward is now {} and "
         #           "the last episode runs to {} time steps!".format(running_reward, t))
         #     break
+    print('Complete')
+    plot_durations(show_result=True)
+    plt.ioff()
+    plt.show()
 
 
 if __name__ == '__main__':
