@@ -30,5 +30,5 @@ def plot_experiment(experimentParameter):
     plt.legend(plots, plotColor)
     plt.show()
 
-
-plot_experiment('Model')
+if __name__ == "__main__":
+    plot_experiment('Model')

@@ -231,6 +231,21 @@ class WordleEnv100(WordleEnvBase):
     def __init__(self):
         super().__init__(words=_load_words(100), max_turns=6)
 
+class WordleEnv200(WordleEnvBase):
+    def __init__(self):
+        super().__init__(words=_load_words(200), max_turns=6)
+
+class WordleEnv300(WordleEnvBase):
+    def __init__(self):
+        super().__init__(words=_load_words(300), max_turns=6)
+
+class WordleEnv400(WordleEnvBase):
+    def __init__(self):
+        super().__init__(words=_load_words(400), max_turns=6)
+
+class WordleEnv500(WordleEnvBase):
+    def __init__(self):
+        super().__init__(words=_load_words(500), max_turns=6)
 
 class WordleEnv100OneAction(WordleEnvBase):
     def __init__(self):
