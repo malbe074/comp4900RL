@@ -9,8 +9,8 @@ def plot_experiment(experimentParameter):
     path = "./*.csv"
 
     # plt.title('Result')
-    plt.xlabel('Episode')
-    plt.ylabel('Average Duration')
+    plt.xlabel('Number of Episodes')
+    plt.ylabel('$κ_{100}$')
 
     plots = []
     plotColor = []
@@ -31,4 +31,4 @@ def plot_experiment(experimentParameter):
     plt.show()
 
 
-plot_experiment('')
+plot_experiment('Model')

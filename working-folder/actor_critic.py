@@ -3,6 +3,7 @@ import gymnasium as gym
 import numpy as np
 from itertools import count
 from collections import namedtuple
+from random import randint
 
 import torch
 import torch.nn as nn
@@ -16,7 +17,7 @@ import matplotlib.pyplot as plt
 # >>> m.sample()  # equal probability of 0, 1, 2, 3
 # tensor(3)
 
-from wordle import WordleEnv100
+from wordle import WordleEnv20, WordleEnv100
 import pandas as pd
 import glob
 
@@ -42,8 +43,9 @@ args = parser.parse_args() # printing args gives # Namespace(gamma=0.99, seed=54
 # Gradient clipping?
 # Encourage/discourage exploration via softmax temperatures
 # Normalizing returns
+# Learning rate
 
-env = WordleEnv100()
+env = WordleEnv20()
 state = env.reset(seed=args.seed)
 torch.manual_seed(args.seed)
 
@@ -69,7 +71,7 @@ class Policy(nn.Module):
         self.affine1 = nn.Linear(n_observations, 128) # creates an instance of the nn.Linear module and assigns it to the attribute affine1 of the current class instance
 
         # actor's layer
-        self.action_head = nn.Linear(128, n_action) # our theta
+        self.action_head = nn.Linear(128, n_action) # our theta. Each of the n_action outputs can be thought of as an action preference
         # self.action_layer = nn.Linear(n_observations, 104)
         # self.action_head = nn.Linear(128, n_action) # our theta
 
@@ -106,7 +108,7 @@ class Policy(nn.Module):
 
 n_observations = len(state)
 model = Policy(n_observations, env.action_space.n)
-optimizer = optim.AdamW(model.parameters(), lr=1e-4)
+optimizer = optim.Adam(model.parameters(), lr=1e-4)
 eps = np.finfo(np.float32).eps.item() # uses NumPy to obtain the machine epsilon for the float32 data type. Machine epsilon is the difference between 1 and the smallest number greater than 1 that is representable in the given floating-point data type.
 
 
@@ -124,6 +126,7 @@ def select_action(state):
     model.saved_actions.append(SavedAction(m.log_prob(action), state_value)) # the SavedAction tuple is <'log_prob', 'value'>
 
     # the action to take (left or right) (or for wordle, which word to guess)
+    # print(randint(0,19))
     return action.item()
 
 
@@ -174,8 +177,6 @@ def finish_episode():
 
     # sum up all the values of policy_losses and value_losses
     loss = torch.stack(policy_losses).sum() + torch.stack(value_losses).sum()
-
-
 
     # perform backprop
     loss.backward()
@@ -229,7 +230,7 @@ def plot_durations(show_result=False):
         return meanResults
 
 def main():
-    running_reward = 10 # This is a running value, which starts out at 10, but gets updated with EACH EPISODE (not each step)! It's a weighted avg between the episode reward (NEW VALUE) and the running reward (OLD VALUE).
+    # running_reward = 10 # This is a running value, which starts out at 10, but gets updated with EACH EPISODE (not each step)! It's a weighted avg between the episode reward (NEW VALUE) and the running reward (OLD VALUE).
     num_episodes = 40000
 
     # run infinitely many episodes
@@ -261,15 +262,15 @@ def main():
                 break
 
         # update cumulative reward
-        running_reward = 0.05 * ep_reward + (1 - 0.05) * running_reward
+        # running_reward = 0.05 * ep_reward + (1 - 0.05) * running_reward
 
         # perform backprop
         finish_episode() # Optimize at the end of the ep, not after each step
 
         # log results
-        if i_episode % args.log_interval == 0:
-            print('Episode {}\tLast reward: {:.2f}\tAverage reward: {:.2f}'.format(
-                  i_episode, ep_reward, running_reward))
+        # if i_episode % args.log_interval == 0:
+        #     print('Episode {}\tLast reward: {:.2f}\tAverage reward: {:.2f}'.format(
+        #           i_episode, ep_reward, running_reward))
 
         # check if we have "solved" the cart pole problem
         # if running_reward > env.spec.reward_threshold:
@@ -280,6 +281,26 @@ def main():
     plot_durations(show_result=True)
     plt.ioff()
     plt.show()
+    
+    # aving the average duration in a file
+    x_df = pd.DataFrame(data)
+    # CHANGE the string based on the parameter you are assigned to experiement (epsilon, batch, reward, discount factor, Q-network weight, hidden layers, space)
+    experimentParameter = "NA"
+    other = "Opitmal-Parameters"
+    # CHANGE LR to experiment variable
+    if (experimentParameter == "Epsilon"):
+        fileName = experimentParameter+"["+str(EPS_START)+", "+str(EPS_END)+", "+str(EPS_DECAY)+"]"+".csv"
+    elif (experimentParameter == "NA"):
+        fileName = other+".csv"
+    else:
+        fileName = experimentParameter+str(LR)+".csv"
+    x_df.to_csv(fileName, index=False)
+
+    final_mean_result = np.mean(episode_durations[-1000:])
+    print('Average duration of last 1000 episodes: ', final_mean_result)
+    
+
+    
 
 
 if __name__ == '__main__':

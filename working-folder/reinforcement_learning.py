@@ -11,7 +11,7 @@ import torch.nn as nn  # neural networks
 import torch.optim as optim  # optimisation
 import torch.nn.functional as F
 import numpy as np
-from wordle import WordleEnv100
+from wordle import WordleEnv20, WordleEnv100
 
 import pandas as pd
 import glob
@@ -165,7 +165,7 @@ def select_action(state):
 episode_durations = []
 data = torch.tensor(episode_durations, dtype=torch.float)
 
-# this function plots the durations of episodes as a function of every 100 episodes and also plots the average duration over the last 1000 episodes. 
+# this function plots the durations of episodes as a function of every 100 episodes and also plots the average duration over the last 100 episodes. 
 def plot_durations(show_result=False):
     meanResults = torch.tensor(episode_durations, dtype=torch.float)
     plt.figure(1)  # creates a new figure for plotting
