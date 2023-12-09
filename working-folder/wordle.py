@@ -223,6 +223,9 @@ class WordleEnv10(WordleEnvBase):
     def __init__(self):
         super().__init__(words=_load_words(10), max_turns=6)
 
+class WordleEnv20(WordleEnvBase):
+    def __init__(self):
+        super().__init__(words=_load_words(20), max_turns=6)
 
 class WordleEnv100(WordleEnvBase):
     def __init__(self):
