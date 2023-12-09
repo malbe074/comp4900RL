@@ -11,7 +11,7 @@ import torch.nn as nn  # neural networks
 import torch.optim as optim  # optimisation
 import torch.nn.functional as F
 import numpy as np
-from wordle import WordleEnv20, WordleEnv100
+from wordle import WordleEnv20, WordleEnv100, WordleEnv200, WordleEnv300, WordleEnv400, WordleEnv500
 
 import pandas as pd
 import glob
@@ -100,16 +100,46 @@ EPS_DECAY = 1000
 TAU = 0.005
 LR = 5e-5  # halve learning rate
 
+load_path = './dqn_wordle_data.pth' # this is the path to the saved model
+
 # Setting up seeds
 seed = 42  # https://stackoverflow.com/questions/75943057/i-cant-find-how-to-reproducibly-run-a-python-gymnasium-taxi-v3-environment
 np.random.seed(seed)
 # https://www.w3schools.com/python/ref_random_seed.asp#:~:text=The%20random%20number%20generator%20needs,of%20the%20random%20number%20generator.
 random.seed(seed)
-# https://gymnasium.farama.org/api/spaces/fundamental/#gymnasium.spaces.Discrete.sample
-env.action_space.seed(seed)
 # https://pytorch.org/docs/stable/generated/torch.manual_seed.html
 torch.manual_seed(seed)
 
+# SETUP WARM START ENVIRONMENT
+warm_start = False
+restart = False
+if warm_start:
+    env_orig = WordleEnv100()  # CHANGE THIS TO THE ENVIRONMENT YOU WANT TO WARM START FROM
+    original_n_actions = env_orig.action_space.n
+    orig_state = env_orig.reset(seed=seed)
+    original_n_observations = len(orig_state)
+    original_model = DQN(original_n_observations, original_n_actions).to(device)
+    original_model.load_state_dict(torch.load(load_path))
+
+# SETUP ENVIRONMENT TRAINING ENVIRONMENT
+env = WordleEnv100() # CHANGE THIS TO THE ENVIRONMENT YOU WANT TO RUN
+env.action_space.seed(seed)    # https://gymnasium.farama.org/api/spaces/fundamental/#gymnasium.spaces.Discrete.sample
+n_actions = env.action_space.n # reset() should be called with a seed right after initialization and then never again. https://gymnasium.farama.org/api/env/#gymnasium.Env.reset
+state = env.reset(seed=seed)
+n_observations = len(state)
+
+policy_net = DQN(n_observations, n_actions).to(device)
+if warm_start:
+    print("Warm Starting")
+    assert original_n_observations == n_observations, "observation space should be the same"
+    policy_net.layer1.weight.data = original_model.layer1.weight.data.clone()
+    policy_net.layer1.bias.data = original_model.layer1.bias.data.clone()
+    # for transfer learning, we can freeze the weights of the first layer
+    # for param in policy_net.layer1.parameters():
+    #     param.requires_grad = False
+elif restart:
+    print("Restarting")
+    policy_net.load_state_dict(torch.load(load_path))
 
 # Get number of actions from gym action space
 n_actions = env.action_space.n
@@ -120,7 +150,7 @@ n_observations = len(state)
 
 # Policy network is kinda like a neural network which contains our policy data (i.e. optimal Q values, or at least how to get them)
 # Target network is kinda like the "little brother" of the policy network, that learns at a slightly slower rate. It's a tool used during training to provide stable target values
-policy_net = DQN(n_observations, n_actions).to(device)
+# policy_net = DQN(n_observations, n_actions).to(device)
 # policy_net.load_state_dict(torch.load('./static_goal_100_words.pth')) # Load data in my saved file
 # policy_net.eval() # Evaluate model
 target_net = DQN(n_observations, n_actions).to(device)
@@ -128,6 +158,11 @@ target_net.load_state_dict(policy_net.state_dict())
 
 # initializing an AdamW optimizer for the policy_net neural network.
 optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
+
+# modified optimizer to only update the parameters that require gradients
+# optimizer = optim.AdamW(filter(lambda p: p.requires_grad, policy_net.parameters()), lr=LR, amsgrad=True)
+
+
 # https://pytorch.org/docs/stable/optim.html
 # optim is constructing an optimizer object that will hold the current state (e.g. wordle 416 array) and will update the parameters (i.e. the w1, w2, etc within our neural network) based on the computed gradients (want w1, w2 that minimizes objective func)
 # 1st arg is an iterable containing the parameters (all should be 'Variable's) to optimize.
@@ -165,7 +200,7 @@ def select_action(state):
 episode_durations = []
 data = torch.tensor(episode_durations, dtype=torch.float)
 
-# this function plots the durations of episodes as a function of every 100 episodes and also plots the average duration over the last 100 episodes. 
+# this function plots the durations of episodes as a function of every 100 episodes and also plots the average duration over the last 100 episodes.
 def plot_durations(show_result=False):
     meanResults = torch.tensor(episode_durations, dtype=torch.float)
     plt.figure(1)  # creates a new figure for plotting
